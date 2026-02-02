@@ -1,51 +1,37 @@
 import frappe
 import json
 
-def is_external_api_call():
-    headers = frappe.local.request.headers or {}
-    form = frappe.form_dict or {}
-
-    # 1️⃣ Authorization header (Bearer / Basic / Token)
-    if headers.get("Authorization"):
-        return True
-
-    # 2️⃣ API key based auth (query or form)
-    if form.get("api_key") and (form.get("api_secret") or form.get("api_token")):
-        return True
-
-    # 3️⃣ Explicit API client (no browser session)
-    if not frappe.session.sid:
-        return True
-
-    return False
-
+IGNORED_PREFIXES = (
+    "frappe.realtime.",
+    "frappe.desk.reportview.",
+    "frappe.desk.doctype.route_history.",
+    "frappe.model.",
+)
 
 def log_api_request(response=None):
     # 🛑 recursion guard
     if getattr(frappe.local, "_api_audit_logging", False):
         return
-
     frappe.local._api_audit_logging = True
 
     try:
-        # Ensure request
+        # Ensure request exists
         if not hasattr(frappe.local, "request"):
             return
 
         path = frappe.local.request.path or ""
-
-        # ONLY whitelisted API methods
         if not path.startswith("/api/method/"):
             return
 
-        # 🔥 THIS IS THE KEY FILTER
-        if not is_external_api_call():
-            return
-
-        # Extract method
-        method = path.replace("/api/method/", "").strip()
+        # Method must come explicitly from cmd
+        method = frappe.form_dict.get("cmd")
         if not method:
             return
+
+        # Ignore known internal namespaces
+        for prefix in IGNORED_PREFIXES:
+            if method.startswith(prefix):
+                return
 
         # Load settings
         try:
