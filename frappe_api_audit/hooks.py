@@ -27,7 +27,6 @@ app_license = "mit"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/frappe_api_audit/css/frappe_api_audit.css"
 # app_include_js = "/assets/frappe_api_audit/js/frappe_api_audit.js"
-app_include_py = ["frappe_api_audit.overrides.api_audit"] 
 
 # include js, css files in header of web template
 # web_include_css = "/assets/frappe_api_audit/css/frappe_api_audit.css"
@@ -194,6 +193,12 @@ scheduler_events = {
 # ----------------
 # before_request = ["frappe_api_audit.utils.before_request"]
 # after_request = ["frappe_api_audit.utils.after_request"]
+before_request = [
+    "frappe_api_audit.audit.before_request.rate_limit"
+]
+after_request = [
+    "frappe_api_audit.audit.after_request_logger.log_api_request"
+]
 
 # Job Events
 # ----------

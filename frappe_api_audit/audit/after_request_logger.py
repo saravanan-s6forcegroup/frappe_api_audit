@@ -1,0 +1,110 @@
+import frappe
+import json
+
+# Internal namespaces to IGNORE
+IGNORED_PREFIXES = (
+    "frappe.desk.reportview.",
+    "frappe.model.",
+    "frappe.get_doc",
+    "frappe.get_list",
+    "frappe.get_all",
+)
+
+def log_api_request(response=None):
+    # --------------------------------------------------
+    # 🛑 Prevent recursion
+    # --------------------------------------------------
+    if getattr(frappe.local, "_api_audit_logging", False):
+        return
+
+    frappe.local._api_audit_logging = True
+
+    try:
+        # --------------------------------------------------
+        # Ensure request exists
+        # --------------------------------------------------
+        if not hasattr(frappe.local, "request"):
+            return
+
+        path = frappe.local.request.path or ""
+
+        # --------------------------------------------------
+        # ✅ ONLY explicit API method calls
+        # --------------------------------------------------
+        # Must be exactly /api/method/<something>
+        if not path.startswith("/api/method/"):
+            return
+
+        # Extract method name from URL
+        method = path.replace("/api/method/", "").strip()
+
+        if not method:
+            return
+
+        # --------------------------------------------------
+        # ❌ Ignore internal desk helpers
+        # --------------------------------------------------
+        for prefix in IGNORED_PREFIXES:
+            if method.startswith(prefix):
+                return
+
+        # --------------------------------------------------
+        # Load settings
+        # --------------------------------------------------
+        try:
+            settings = frappe.get_single("API Audit Settings")
+        except Exception:
+            return
+
+        if not settings.enabled:
+            return
+
+        user = frappe.session.user
+        roles = frappe.get_roles(user)
+
+        if user == "Guest" and not settings.log_guest:
+            return
+
+        if settings.allowed_roles:
+            allowed = {r.role for r in settings.allowed_roles}
+            if not allowed.intersection(roles):
+                return
+
+        # --------------------------------------------------
+        # Status
+        # --------------------------------------------------
+        http_status = frappe.response.get("http_status_code", 200)
+        status = "Success" if http_status < 400 else "Failed"
+
+        # --------------------------------------------------
+        # Payloads
+        # --------------------------------------------------
+        request_payload = dict(frappe.form_dict)
+        response_data = frappe.response.get("message")
+
+        resp_str = json.dumps(response_data, default=str) if response_data else ""
+        preview = resp_str[: (settings.max_response_preview_kb or 4) * 1024]
+
+        # --------------------------------------------------
+        # Insert log
+        # --------------------------------------------------
+        frappe.get_doc({
+            "doctype": "API Access Log",
+            "method": method,
+            "user": user,
+            "ip_address": frappe.local.request_ip,
+            "http_method": frappe.local.request.method,
+            "status": status,
+            "execution_time_ms": frappe.response.get("time_taken", 0),
+            "response_size_bytes": len(resp_str),
+            "request_payload": json.dumps(request_payload),
+            "response_preview": preview,
+            "error_trace": frappe.response.get("exc"),
+            "app_name": method.split(".")[0],
+            "role_snapshot": ", ".join(roles),
+        }).insert(ignore_permissions=True)
+
+        frappe.db.commit()
+
+    finally:
+        frappe.local._api_audit_logging = False

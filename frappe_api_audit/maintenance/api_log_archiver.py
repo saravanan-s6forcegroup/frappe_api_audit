@@ -77,3 +77,18 @@ def archive_api_logs_to_s3():
     )
 
     frappe.db.commit()
+
+
+
+
+@frappe.whitelist()
+def run_api_log_archival_now():
+    # 🔐 Security: allow only System Managers
+    if "System Manager" not in frappe.get_roles():
+        frappe.throw("Not permitted")
+
+    archive_api_logs_to_s3()
+    return {
+        "status": "success",
+        "message": "API logs archived to S3 successfully"
+    }
