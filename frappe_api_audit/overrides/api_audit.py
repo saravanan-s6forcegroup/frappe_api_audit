@@ -25,9 +25,11 @@ def archive_api_logs_to_s3():
     if not logs:
         return
 
+    names = [l.name for l in logs]
+
     rows = frappe.get_all(
         "API Access Log",
-        filters={"name": ("in", [l.name for l in logs])},
+        filters={"name": ("in", names)},
         fields="*"
     )
 
@@ -41,7 +43,9 @@ def archive_api_logs_to_s3():
         f"staging_{from_ts}_to_{to_ts}_api_logs.jsonl"
     )
 
+    # -------------------------------
     # Upload via File → S3
+    # -------------------------------
     file_doc = frappe.get_doc({
         "doctype": "File",
         "file_name": s3_path.split("/")[-1],
@@ -49,20 +53,24 @@ def archive_api_logs_to_s3():
         "is_private": 1
     }).insert(ignore_permissions=True)
 
-    # ✅ Mark logs as archived & link file
+    # -------------------------------
+    # Mark archived (optional)
+    # -------------------------------
     frappe.db.set_value(
         "API Access Log",
-        {"name": ("in", [l.name for l in logs])},
+        {"name": ("in", names)},
         {
             "archived": 1,
             "archive_file": file_doc.name
         }
     )
 
-    # ✅ Optional hard delete (if you want DB cleanup)
+    # -------------------------------
+    # 🔥 GUARANTEED DELETE
+    # -------------------------------
     frappe.db.delete(
         "API Access Log",
-        {"archived": 1, "archive_file": file_doc.name}
+        {"name": ("in", names)}
     )
 
     frappe.db.commit()

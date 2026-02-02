@@ -16,7 +16,9 @@
   "response_preview",
   "error_trace",
   "app_name",
-  "role_snapshot"
+  "role_snapshot",
+  "archived",
+  "archive_file"
  ],
  "fields": [
   {
@@ -82,12 +84,24 @@
    "fieldname": "role_snapshot",
    "fieldtype": "Small Text",
    "label": "Role Snapshot"
+  },
+  {
+   "default": "0",
+   "fieldname": "archived",
+   "fieldtype": "Check",
+   "label": "Archived"
+  },
+  {
+   "fieldname": "archive_file",
+   "fieldtype": "Link",
+   "label": "Archive File",
+   "options": "File"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-02 11:53:11.823531",
+ "modified": "2026-02-02 18:14:37.427007",
  "modified_by": "Administrator",
  "module": "Frappe API Audit",
  "name": "API Access Log",
