@@ -27,6 +27,7 @@ app_license = "mit"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/frappe_api_audit/css/frappe_api_audit.css"
 # app_include_js = "/assets/frappe_api_audit/js/frappe_api_audit.js"
+app_include_py = ["frappe_api_audit.overrides.api_audit"] 
 
 # include js, css files in header of web template
 # web_include_css = "/assets/frappe_api_audit/css/frappe_api_audit.css"
@@ -148,23 +149,18 @@ app_license = "mit"
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"frappe_api_audit.tasks.all"
-# 	],
-# 	"daily": [
-# 		"frappe_api_audit.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"frappe_api_audit.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"frappe_api_audit.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"frappe_api_audit.tasks.monthly"
-# 	],
-# }
+scheduler_events = { 
+    "cron": { 
+        "*/2 * * * *": [ 
+            "frappe_api_audit.monitoring.api_alerts.alert_on_failure_spike" 
+        ] 
+    }, 
+    "daily": [ 
+        "frappe_api_audit.maintenance.api_log_archiver.archive_api_logs_to_s3" 
+    ] 
+} 
+
+
 
 # Testing
 # -------

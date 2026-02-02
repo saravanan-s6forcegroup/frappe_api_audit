@@ -1,0 +1,114 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-02 10:29:33.518406",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "method",
+  "user",
+  "ip_address",
+  "http_method",
+  "status",
+  "execution_time_ms",
+  "response_size_bytes",
+  "request_payload",
+  "response_preview",
+  "error_trace",
+  "app_name",
+  "role_snapshot"
+ ],
+ "fields": [
+  {
+   "fieldname": "method",
+   "fieldtype": "Data",
+   "label": "Method",
+   "search_index": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User"
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address"
+  },
+  {
+   "fieldname": "http_method",
+   "fieldtype": "Data",
+   "label": "HTTP Method"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Success\nFailed\nBlocked",
+   "search_index": 1
+  },
+  {
+   "fieldname": "execution_time_ms",
+   "fieldtype": "Int",
+   "label": "Execution Time MS"
+  },
+  {
+   "fieldname": "response_size_bytes",
+   "fieldtype": "Int",
+   "label": "Response Size Bytes"
+  },
+  {
+   "fieldname": "request_payload",
+   "fieldtype": "Long Text",
+   "label": "Request Payload"
+  },
+  {
+   "fieldname": "response_preview",
+   "fieldtype": "Long Text",
+   "label": "Response Preview "
+  },
+  {
+   "fieldname": "error_trace",
+   "fieldtype": "Long Text",
+   "label": "Error Trace "
+  },
+  {
+   "fieldname": "app_name",
+   "fieldtype": "Data",
+   "label": "App Name"
+  },
+  {
+   "fieldname": "role_snapshot",
+   "fieldtype": "Small Text",
+   "label": "Role Snapshot"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-02-02 11:53:11.823531",
+ "modified_by": "Administrator",
+ "module": "Frappe API Audit",
+ "name": "API Access Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

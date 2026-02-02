@@ -1,0 +1,148 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-02 10:44:32.824478",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "core_section",
+  "enabled",
+  "log_guest",
+  "allowed_roles",
+  "section_break_shfn",
+  "mask_fields",
+  "max_response_preview_kb",
+  "section_break_jlsh",
+  "rate_limit_per_inute_int",
+  "section_break_mnio",
+  "failure_window_minutes",
+  "failure_threshold",
+  "alert_cooldown_minutes",
+  "alert_emails",
+  "section_break_urde",
+  "retain_logs_days",
+  "s3_prefix",
+  "archive_batch_size"
+ ],
+ "fields": [
+  {
+   "fieldname": "core_section",
+   "fieldtype": "Section Break",
+   "label": "Core"
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "log_guest",
+   "fieldtype": "Check",
+   "label": "Log Guest"
+  },
+  {
+   "fieldname": "allowed_roles",
+   "fieldtype": "Table",
+   "label": "Allowed Roles",
+   "options": "User Role"
+  },
+  {
+   "fieldname": "section_break_shfn",
+   "fieldtype": "Section Break",
+   "label": "Security"
+  },
+  {
+   "fieldname": "mask_fields",
+   "fieldtype": "Small Text",
+   "label": "Mask Fields"
+  },
+  {
+   "fieldname": "max_response_preview_kb",
+   "fieldtype": "Int",
+   "label": "Max Response Preview KB "
+  },
+  {
+   "fieldname": "section_break_jlsh",
+   "fieldtype": "Section Break",
+   "label": "Rate Limiting"
+  },
+  {
+   "fieldname": "rate_limit_per_inute_int",
+   "fieldtype": "Int",
+   "label": "Rate Limit Per inute (Int) "
+  },
+  {
+   "fieldname": "section_break_mnio",
+   "fieldtype": "Section Break",
+   "label": "Monitoring"
+  },
+  {
+   "fieldname": "failure_window_minutes",
+   "fieldtype": "Int",
+   "label": "Failure Window Minutes "
+  },
+  {
+   "fieldname": "failure_threshold",
+   "fieldtype": "Int",
+   "label": "Failure Threshold"
+  },
+  {
+   "fieldname": "alert_cooldown_minutes",
+   "fieldtype": "Int",
+   "label": "Alert Cooldown Minutes"
+  },
+  {
+   "fieldname": "alert_emails",
+   "fieldtype": "Small Text",
+   "label": "Alert Emails"
+  },
+  {
+   "fieldname": "section_break_urde",
+   "fieldtype": "Section Break",
+   "label": "Archival"
+  },
+  {
+   "fieldname": "retain_logs_days",
+   "fieldtype": "Int",
+   "label": "Retain Logs Days"
+  },
+  {
+   "fieldname": "s3_prefix",
+   "fieldtype": "Data",
+   "label": "S3 Prefix"
+  },
+  {
+   "fieldname": "archive_batch_size",
+   "fieldtype": "Int",
+   "label": "Archive Batch Size"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-02-02 11:52:59.380289",
+ "modified_by": "Administrator",
+ "module": "Frappe API Audit",
+ "name": "API Audit Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
