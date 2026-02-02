@@ -1,13 +1,6 @@
 import frappe
 import json
 
-IGNORED_PREFIXES = (
-    "frappe.realtime.",
-    "frappe.desk.reportview.",
-    "frappe.desk.doctype.route_history.",
-    "frappe.model.",
-)
-
 def log_api_request(response=None):
     # 🛑 recursion guard
     if getattr(frappe.local, "_api_audit_logging", False):
@@ -15,7 +8,6 @@ def log_api_request(response=None):
     frappe.local._api_audit_logging = True
 
     try:
-        # Ensure request exists
         if not hasattr(frappe.local, "request"):
             return
 
@@ -23,17 +15,15 @@ def log_api_request(response=None):
         if not path.startswith("/api/method/"):
             return
 
-        # Method must come explicitly from cmd
         method = frappe.form_dict.get("cmd")
         if not method:
             return
 
-        # Ignore known internal namespaces
-        for prefix in IGNORED_PREFIXES:
-            if method.startswith(prefix):
-                return
+        # 🔒 FINAL HARD FILTER (GUARANTEED)
+        if method.startswith("frappe.") or method.startswith("erpnext."):
+            return
 
-        # Load settings
+        # Settings
         try:
             settings = frappe.get_single("API Audit Settings")
         except Exception:
@@ -53,18 +43,13 @@ def log_api_request(response=None):
             if not allowed.intersection(roles):
                 return
 
-        # Status
         http_status = frappe.response.get("http_status_code", 200)
         status = "Success" if http_status < 400 else "Failed"
 
-        # Payloads
         request_payload = dict(frappe.form_dict)
         response_data = frappe.response.get("message")
-
         resp_str = json.dumps(response_data, default=str) if response_data else ""
-        preview = resp_str[: (settings.max_response_preview_kb or 4) * 1024]
 
-        # Insert log
         frappe.get_doc({
             "doctype": "API Access Log",
             "method": method,
@@ -75,7 +60,7 @@ def log_api_request(response=None):
             "execution_time_ms": frappe.response.get("time_taken", 0),
             "response_size_bytes": len(resp_str),
             "request_payload": json.dumps(request_payload),
-            "response_preview": preview,
+            "response_preview": resp_str[: (settings.max_response_preview_kb or 4) * 1024],
             "error_trace": frappe.response.get("exc"),
             "app_name": method.split(".")[0],
             "role_snapshot": ", ".join(roles),
