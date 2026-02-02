@@ -1,119 +1,68 @@
 import frappe
 import json
-import time
-from functools import wraps
+from frappe.utils import now_datetime, add_to_date
 
-
-RATE_BUCKET = {}
-
-
-def get_settings():
-    return frappe.get_single("API Audit Settings")
-
-
-def mask_pii(data, fields):
-    if not isinstance(data, dict):
-        return data
-    return {
-        k: "***MASKED***" if k.lower() in fields else v
-        for k, v in data.items()
-    }
-
-
-def check_rate_limit(user, limit):
-    if not limit:
+def archive_api_logs_to_s3():
+    settings = frappe.get_single("API Audit Settings")
+    if not settings.enabled:
         return
 
-    bucket = int(time.time() / 60)
-    key = f"{user}:{bucket}"
+    cutoff = add_to_date(
+        now_datetime(),
+        days=-(settings.retain_logs_days or 30)
+    )
 
-    RATE_BUCKET[key] = RATE_BUCKET.get(key, 0) + 1
-    if RATE_BUCKET[key] > limit:
-        frappe.throw("Rate limit exceeded", frappe.PermissionError)
+    logs = frappe.get_all(
+        "API Access Log",
+        filters={
+            "creation": ("<", cutoff),
+            "archived": 0
+        },
+        limit=settings.archive_batch_size or 5000,
+        order_by="creation asc"
+    )
 
+    if not logs:
+        return
 
-# ==================================================
-# SAFE API-ONLY WHITELIST DECORATOR
-# ==================================================
-def api_audit_whitelist(*args, **kwargs):
-    def decorator(fn):
-        @frappe.whitelist(*args, **kwargs)
-        @wraps(fn)
-        def wrapper(*a, **kw):
-            # Only API calls
-            if not hasattr(frappe.local, "request"):
-                return fn(*a, **kw)
+    rows = frappe.get_all(
+        "API Access Log",
+        filters={"name": ("in", [l.name for l in logs])},
+        fields="*"
+    )
 
-            path = frappe.local.request.path or ""
-            if not path.startswith("/api/"):
-                return fn(*a, **kw)
+    content = "\n".join(json.dumps(r, default=str) for r in rows)
 
-            try:
-                settings = get_settings()
-            except Exception:
-                return fn(*a, **kw)
+    from_ts = rows[0]["creation"].strftime("%Y%m%d_%H%M%S")
+    to_ts = rows[-1]["creation"].strftime("%Y%m%d_%H%M%S")
 
-            if not settings.enabled:
-                return fn(*a, **kw)
+    s3_path = (
+        f"{settings.s3_prefix or 'api-logs'}/"
+        f"staging_{from_ts}_to_{to_ts}_api_logs.jsonl"
+    )
 
-            user = frappe.session.user
-            roles = frappe.get_roles(user)
+    # Upload via File → S3
+    file_doc = frappe.get_doc({
+        "doctype": "File",
+        "file_name": s3_path.split("/")[-1],
+        "content": content,
+        "is_private": 1
+    }).insert(ignore_permissions=True)
 
-            if user == "Guest" and not settings.log_guest:
-                return fn(*a, **kw)
+    # ✅ Mark logs as archived & link file
+    frappe.db.set_value(
+        "API Access Log",
+        {"name": ("in", [l.name for l in logs])},
+        {
+            "archived": 1,
+            "archive_file": file_doc.name
+        }
+    )
 
-            if settings.allowed_roles:
-                allowed = {r.role for r in settings.allowed_roles}
-                if not allowed.intersection(roles):
-                    return fn(*a, **kw)
+    # ✅ Optional hard delete (if you want DB cleanup)
+    frappe.db.delete(
+        "API Access Log",
+        {"archived": 1, "archive_file": file_doc.name}
+    )
 
-            rate_limit = getattr(settings, "rate_limit_per_inute_int", None)
-            check_rate_limit(user, rate_limit)
-
-            start = time.perf_counter()
-            status = "Success"
-            response = None
-            error_trace = None
-
-            try:
-                response = fn(*a, **kw)
-                return response
-            except Exception:
-                status = "Failed"
-                error_trace = frappe.get_traceback()
-                raise
-            finally:
-                elapsed = int((time.perf_counter() - start) * 1000)
-
-                masked = mask_pii(
-                    dict(frappe.form_dict),
-                    set((settings.mask_fields or "").lower().split(","))
-                )
-
-                resp_str = json.dumps(response, default=str) if response else ""
-                preview = resp_str[: (settings.max_response_preview_kb or 4) * 1024]
-
-                try:
-                    frappe.get_doc({
-                        "doctype": "API Access Log",
-                        "method": f"{fn.__module__}.{fn.__name__}",
-                        "user": user,
-                        "ip_address": frappe.local.request_ip,
-                        "http_method": frappe.request.method,
-                        "status": status,
-                        "execution_time_ms": elapsed,
-                        "response_size_bytes": len(resp_str),
-                        "request_payload": json.dumps(masked),
-                        "response_preview": preview,
-                        "error_trace": error_trace,
-                        "app_name": fn.__module__.split(".")[0],
-                        "role_snapshot": ", ".join(roles),
-                    }).insert(ignore_permissions=True)
-                except Exception:
-                    frappe.log_error(
-                        frappe.get_traceback(),
-                        "API Audit Log Insert Failed"
-                    )
-
-        return wrapper
-    return decorator
+    frappe.db.commit()
