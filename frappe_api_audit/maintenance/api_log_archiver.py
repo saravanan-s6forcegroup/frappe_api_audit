@@ -1,6 +1,22 @@
 import frappe
 import json
-from frappe.utils import now_datetime
+
+ARCHIVE_FIELDS = [
+    "name",
+    "creation",
+    "method",
+    "user",
+    "ip_address",
+    "http_method",
+    "status",
+    "execution_time_ms",
+    "response_size_bytes",
+    "request_payload",
+    "response_preview",
+    "error_trace",
+    "app_name",
+    "role_snapshot",
+]
 
 def archive_api_logs_dynamic_range():
     settings = frappe.get_single("API Audit Settings")
@@ -9,7 +25,7 @@ def archive_api_logs_dynamic_range():
         frappe.throw("API Audit is disabled")
 
     # ----------------------------------
-    # Fetch ALL logs (or you can add filters later)
+    # Fetch ONLY required fields
     # ----------------------------------
     logs = frappe.get_all(
         "API Access Log",
@@ -25,18 +41,15 @@ def archive_api_logs_dynamic_range():
 
     names = [l["name"] for l in logs]
 
-    # ----------------------------------
-    # Fetch full rows
-    # ----------------------------------
     rows = frappe.get_all(
         "API Access Log",
         filters={"name": ("in", names)},
-        fields="*",
+        fields=ARCHIVE_FIELDS,
         order_by="creation asc"
     )
 
     # ----------------------------------
-    # Determine ACTUAL time range
+    # Actual time range
     # ----------------------------------
     from_dt = rows[0]["creation"]
     to_dt = rows[-1]["creation"]
@@ -50,14 +63,14 @@ def archive_api_logs_dynamic_range():
     file_path = f"{s3_prefix}/{file_name}"
 
     # ----------------------------------
-    # File content (JSONL)
+    # JSONL content
     # ----------------------------------
     content = "\n".join(
         json.dumps(row, default=str) for row in rows
     )
 
     # ----------------------------------
-    # Upload to S3 via File DocType
+    # Upload to S3
     # ----------------------------------
     file_doc = frappe.get_doc({
         "doctype": "File",
@@ -67,7 +80,7 @@ def archive_api_logs_dynamic_range():
     }).insert(ignore_permissions=True)
 
     # ----------------------------------
-    # DELETE logs (by primary key)
+    # Delete archived logs
     # ----------------------------------
     frappe.db.delete(
         "API Access Log",
